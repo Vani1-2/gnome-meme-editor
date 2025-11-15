@@ -42,12 +42,26 @@
                 <property name="width-request">300</property>
 
                 <child>
-                  <object class="GtkButton" id="load_image_button">
-                    <property name="label">Load Image</property>
-                    <property name="halign">fill</property>
-                    <style>
-                      <class name="suggested-action"/>
-                    </style>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="homogeneous">true</property>
+
+                    <child>
+                      <object class="GtkButton" id="load_image_button">
+                        <property name="label">Load Image</property>
+                        <style>
+                          <class name="suggested-action"/>
+                        </style>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkButton" id="clear_button">
+                        <property name="label">Clear</property>
+                        <property name="sensitive">false</property>
+                      </object>
+                    </child>
                   </object>
                 </child>
 
