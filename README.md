@@ -22,4 +22,5 @@ git clone https://github.com/Vani1-2/gnome-meme-generator.git
 cd gnome-meme-generator
 meson setup build
 meson compile -C build
-
+#Optional
+sudo meson install -C build
