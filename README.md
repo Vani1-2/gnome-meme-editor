@@ -19,7 +19,7 @@ The ultimate tool for creating memes built upon GTK-4 and Libadwaita for the GNO
 # Installation
 ## Prerequisite's
 You need to install this packages in order to build this program:
-- gtk4-devel
+- gtk4-devel 
 - libadwaita-devel 
 
 
@@ -27,7 +27,7 @@ You need to install this packages in order to build this program:
 
 
 
-
+## Building
 
 ```bash
 git clone https://github.com/Vani1-2/gnome-meme-generator.git
