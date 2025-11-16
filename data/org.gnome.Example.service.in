@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.gnome.Memerist
-Exec=@bindir@/myapp --gapplication-service

@@ -20,12 +20,10 @@
 
     </ul>
   </description>
-  <developer id="io.github.yourname">
+  <developer id="org.gnome.Memerist">
     <name>Giovanni</name>
   </developer>
-  <url type="homepage">https://github.com/yourname/memerist</url>
-  <url type="vcs-browser">https://github.com/yourname/memerist</url>
-  <url type="bugtracker">https://github.com/yourname/memerist/issues</url>
+  <url type="homepage">https://github.com/Vani1-2/gnome-meme-generator</url>
   <translation type="gettext">memerist</translation>
   <launchable type="desktop-id">org.gnome.Memerist.desktop</launchable>
   <content_rating type="oars-1.1" />
