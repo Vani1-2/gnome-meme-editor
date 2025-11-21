@@ -38,7 +38,7 @@ myapp_application_new (const char        *application_id,
 	return g_object_new (MYAPP_TYPE_APPLICATION,
 	                     "application-id", application_id,
 	                     "flags", flags,
-	                     "resource-base-path", "/org/gnome/Example",
+	                     "resource-base-path", "/org/gnome/Memerist",
 	                     NULL);
 }
 

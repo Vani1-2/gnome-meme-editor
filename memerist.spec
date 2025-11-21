@@ -16,7 +16,7 @@ Create memes with custom text overlays.
 %autosetup
 
 %build
-%meson
+%meson --prefix=/usr
 %meson_build
 
 %install
@@ -27,3 +27,14 @@ Create memes with custom text overlays.
 %{_datadir}/applications/org.gnome.Memerist.desktop
 %{_datadir}/glib-2.0/schemas/org.gnome.Memerist.gschema.xml
 %{_datadir}/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
+%{_datadir}/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
+
+%post
+/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
+/usr/bin/update-desktop-database &> /dev/null || :
+
+%postun
+/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
+/usr/bin/update-desktop-database &> /dev/null || :
