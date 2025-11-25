@@ -43,11 +43,14 @@ struct _MyappWindow
 	GdkPixbuf     *meme_pixbuf;
 	char          *loaded_image_path;
 
+	double         top_text_x;
 	double         top_text_y;
+	double         bottom_text_x;
 	double         bottom_text_y;
 
 	TextType       dragging_text;
 	GtkGestureDrag *drag_gesture;
+	double         drag_start_x;
 	double         drag_start_y;
 };
 
@@ -99,7 +102,9 @@ myapp_window_init (MyappWindow *self)
 {
 	gtk_widget_init_template (GTK_WIDGET (self));
 
+	self->top_text_x = 0.5;
 	self->top_text_y = 0.1;
+	self->bottom_text_x = 0.5;
 	self->bottom_text_y = 0.9;
 	self->dragging_text = TEXT_TYPE_NONE;
 
@@ -128,7 +133,9 @@ myapp_window_init (MyappWindow *self)
 static void
 on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self)
 {
+	int img_width;
 	int img_height;
+	double relative_x;
 	double relative_y;
 	double top_text_abs_y;
 	double bottom_text_abs_y;
@@ -137,7 +144,10 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self)
 	if (self->original_image == NULL)
 		return;
 
+	img_width = gtk_widget_get_width (GTK_WIDGET (self->meme_preview));
 	img_height = gtk_widget_get_height (GTK_WIDGET (self->meme_preview));
+
+	relative_x = x / img_width;
 	relative_y = y / img_height;
 
 	top_text_abs_y = self->top_text_y;
@@ -147,9 +157,11 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self)
 
 	if (fabs (relative_y - top_text_abs_y) < threshold) {
 		self->dragging_text = TEXT_TYPE_TOP;
+		self->drag_start_x = x;
 		self->drag_start_y = y;
 	} else if (fabs (relative_y - bottom_text_abs_y) < threshold) {
 		self->dragging_text = TEXT_TYPE_BOTTOM;
+		self->drag_start_x = x;
 		self->drag_start_y = y;
 	} else {
 		self->dragging_text = TEXT_TYPE_NONE;
@@ -159,22 +171,33 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self)
 static void
 on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, MyappWindow *self)
 {
+	int img_width;
 	int img_height;
+	double new_x;
 	double new_y;
+	double relative_x;
 	double relative_y;
 
 	if (self->dragging_text == TEXT_TYPE_NONE || self->original_image == NULL)
 		return;
 
+	img_width = gtk_widget_get_width (GTK_WIDGET (self->meme_preview));
 	img_height = gtk_widget_get_height (GTK_WIDGET (self->meme_preview));
+
+	new_x = self->drag_start_x + offset_x;
 	new_y = self->drag_start_y + offset_y;
+
+	relative_x = new_x / img_width;
 	relative_y = new_y / img_height;
 
+	relative_x = CLAMP (relative_x, 0.05, 0.95);
 	relative_y = CLAMP (relative_y, 0.05, 0.95);
 
 	if (self->dragging_text == TEXT_TYPE_TOP) {
+		self->top_text_x = relative_x;
 		self->top_text_y = relative_y;
 	} else if (self->dragging_text == TEXT_TYPE_BOTTOM) {
+		self->bottom_text_x = relative_x;
 		self->bottom_text_y = relative_y;
 	}
 
@@ -226,7 +249,9 @@ on_load_image_response (GObject *source, GAsyncResult *result, gpointer user_dat
 		return;
 	}
 
+	self->top_text_x = 0.5;
 	self->top_text_y = 0.1;
+	self->bottom_text_x = 0.5;
 	self->bottom_text_y = 0.9;
 
 	gtk_widget_set_sensitive (GTK_WIDGET (self->export_button), TRUE);
@@ -284,7 +309,9 @@ on_clear_clicked (MyappWindow *self)
 	gtk_widget_set_sensitive (GTK_WIDGET (self->export_button), FALSE);
 	gtk_widget_set_sensitive (GTK_WIDGET (self->clear_button), FALSE);
 
+	self->top_text_x = 0.5;
 	self->top_text_y = 0.1;
+	self->bottom_text_x = 0.5;
 	self->bottom_text_y = 0.9;
 }
 
@@ -360,13 +387,13 @@ render_meme (MyappWindow *self)
 
 	if (top_text && strlen (top_text) > 0) {
 		char *upper_text = g_utf8_strup (top_text, -1);
-		draw_text_with_outline (cr, upper_text, width / 2.0, height * self->top_text_y, width);
+		draw_text_with_outline (cr, upper_text, width * self->top_text_x, height * self->top_text_y, width);
 		g_free (upper_text);
 	}
 
 	if (bottom_text && strlen (bottom_text) > 0) {
 		char *upper_text = g_utf8_strup (bottom_text, -1);
-		draw_text_with_outline (cr, upper_text, width / 2.0, height * self->bottom_text_y, width);
+		draw_text_with_outline (cr, upper_text, width * self->bottom_text_x, height * self->bottom_text_y, width);
 		g_free (upper_text);
 	}
 

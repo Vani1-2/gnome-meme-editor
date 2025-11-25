@@ -1,5 +1,5 @@
 Name:           Memerist
-Version:        0.0.29.alpha.8
+Version:        0.0.35.beta.3
 Release:        1%{?dist}
 Summary:        Meme generator with text overlays
 License:        GPL-3.0-or-later
@@ -12,7 +12,7 @@ Requires:       gtk4 libadwaita
 Create memes with custom text overlays.
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %meson
@@ -31,7 +31,6 @@ Create memes with custom text overlays.
 %post
 /usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
 /usr/bin/update-desktop-database &> /dev/null || :
-# Create symlinks for systems that check /usr/local/share first
 mkdir -p /usr/local/share/icons/hicolor/scalable/apps
 mkdir -p /usr/local/share/icons/hicolor/symbolic/apps
 ln -sf /usr/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg /usr/local/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
@@ -43,7 +42,6 @@ ln -sf /usr/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg /u
 /usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
 /usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 /usr/bin/update-desktop-database &> /dev/null || :
-# Clean up symlinks
 rm -f /usr/local/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
 rm -f /usr/local/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
 
