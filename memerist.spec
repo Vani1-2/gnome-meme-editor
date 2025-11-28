@@ -47,3 +47,7 @@ rm -f /usr/local/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
 rm -f /usr/local/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
 
 
+%changelog
+* Fri Nov 28 2025 Giovanni <giovanni@example.com> - 0.0.38.beta.5
+- Fixed drag and drop geometry for text
+- Initialized drag variables to prevent compiler warnings

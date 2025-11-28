@@ -59,7 +59,9 @@ struct _MyappWindow
 	ImageLayer     image_layer;
 
 	double         top_text_y;
+        double         top_text_x;
 	double         bottom_text_y;
+        double          bottom_text_x;
 
 	DragType       drag_type;
 	GtkGestureDrag *drag_gesture;
@@ -121,7 +123,9 @@ myapp_window_init (MyappWindow *self)
 	gtk_widget_init_template (GTK_WIDGET (self));
 
 	self->top_text_y = 0.1;
+        self->top_text_x = 0.5;
 	self->bottom_text_y = 0.9;
+        self->bottom_text_x = 0.5;
 	self->drag_type = DRAG_TYPE_NONE;
 
 	self->image_layer.x = 0.5;
@@ -189,7 +193,7 @@ populate_template_gallery (MyappWindow *self)
 
 
         gtk_picture_set_can_shrink (GTK_PICTURE (picture), TRUE);
-        gtk_picture_set_content_fit (GTK_PICTURE (picture), GTK_CONTENT_FIT_CONTAIN); // Use GTK_CONTENT_FIT_COVER to crop and fill completely
+        gtk_picture_set_content_fit (GTK_PICTURE (picture), GTK_CONTENT_FIT_CONTAIN);
         gtk_widget_set_size_request (picture, 120, 120);
 
 
@@ -303,8 +307,8 @@ on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, Myapp
 	int img_width;
 	double new_y;
 	double new_x;
-	double relative_y;
-	double relative_x;
+	double relative_y = 0.0;
+	double relative_x = 0.0;
 
 	if (self->drag_type == DRAG_TYPE_NONE || self->template_image == NULL)
 		return;
@@ -319,7 +323,7 @@ on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, Myapp
 		relative_y = new_y / img_height;
 
 		self->image_layer.x = CLAMP (relative_x, 0.0, 1.0);
-		self->image_layer.y = CLAMP (relative_y, 0.0, 1.0);
+		self->image_layer.y = CLAMP (relative_y, 0.05, 0.95);
 
 	} else if (self->drag_type == DRAG_TYPE_IMAGE_RESIZE) {
 		double scale_factor = 1.0 + (offset_x + offset_y) / 200.0;
@@ -332,8 +336,10 @@ on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, Myapp
 
 		if (self->drag_type == DRAG_TYPE_TOP_TEXT) {
 			self->top_text_y = relative_y;
+                        self->top_text_x = relative_x;
 		} else if (self->drag_type == DRAG_TYPE_BOTTOM_TEXT) {
 			self->bottom_text_y = relative_y;
+                        self->bottom_text_x = relative_x;
 		}
 	}
 
@@ -613,16 +619,16 @@ render_meme (MyappWindow *self)
 	}
 
 	if (top_text && strlen (top_text) > 0) {
-		char *upper_text = g_utf8_strup (top_text, -1);
-		draw_text_with_outline (cr, upper_text, width / 2.0, height * self->top_text_y, width);
-		g_free (upper_text);
-	}
+        char *upper_text = g_utf8_strup (top_text, -1);
+        draw_text_with_outline (cr, upper_text, width * self->top_text_x, height * self->top_text_y, width);
+        g_free (upper_text);
+    }
 
 	if (bottom_text && strlen (bottom_text) > 0) {
-		char *upper_text = g_utf8_strup (bottom_text, -1);
-		draw_text_with_outline (cr, upper_text, width / 2.0, height * self->bottom_text_y, width);
-		g_free (upper_text);
-	}
+        char *upper_text = g_utf8_strup (bottom_text, -1);
+        draw_text_with_outline (cr, upper_text, width * self->bottom_text_x, height * self->bottom_text_y, width);
+        g_free (upper_text);
+    }
 
 	cairo_surface_flush (surface);
 	cairo_destroy (cr);
