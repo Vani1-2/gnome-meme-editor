@@ -38,6 +38,11 @@
   <img src="https://github.com/user-attachments/assets/350843ca-83be-4de2-88e4-73e324774602" alt="Meme example 2" width="800"/>
 </p>
 
+<p align="center">
+  <img width="800" alt="Meme example 4" src="https://github.com/user-attachments/assets/65039787-2415-4c41-a880-b4eae7cd93d8" />
+</p>
+
+
 ## Installation
 
 ### Pre-built Packages
