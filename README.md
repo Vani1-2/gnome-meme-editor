@@ -14,7 +14,7 @@
 
 ---
 
-##Features
+## Features
 
 - **Image Import** - Load any image to use as your meme template
 - **Classic Meme Text** - Add customizable top and bottom text
@@ -22,7 +22,7 @@
 - **Native GNOME Design** - Built with Libadwaita
 - **Let it Happen**
 
-##Screenshots
+## Screenshots
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/97e6a40d-1434-4f1b-b672-703a0a6941bb" alt="Meme example 1" width="800"/>
