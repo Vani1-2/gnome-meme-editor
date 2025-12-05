@@ -1,28 +1,30 @@
-version_cmd = run_command('sh', '-c', 'grep "^Version:" memerist.spec | awk "{print \$2}"', check: false)
-app_version = version_cmd.stdout().strip()
-
-
-if app_version == ''
-  app_version = '0.1.0'
-endif
-
 project('memerist', 'c',
-          version: app_version,
+          version: '0.1.0',
     meson_version: '>= 1.0.0',
   default_options: [ 'warning_level=2', 'werror=false', 'c_std=gnu11', ],
 )
+
 
 i18n = import('i18n')
 gnome = import('gnome')
 cc = meson.get_compiler('c')
 
+version_cmd = run_command('sh', '-c', 'grep "^Version:" memerist.spec | awk "{print \$2}"', check: false)
+real_version = version_cmd.stdout().strip()
+
+if real_version == ''
+  real_version = meson.project_version()
+endif
+
+
+
 config_h = configuration_data()
-config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
-config_h.set_quoted('GETTEXT_PACKAGE', 'myapp')
+config_h.set_quoted('PACKAGE_VERSION', real_version)
+config_h.set_quoted('GETTEXT_PACKAGE', 'memerist')
 config_h.set_quoted('LOCALEDIR', get_option('prefix') / get_option('localedir'))
 configure_file(output: 'config.h', configuration: config_h)
-add_project_arguments(['-I' + meson.project_build_root()], language: 'c')
 
+add_project_arguments(['-I' + meson.project_build_root()], language: 'c')
 
 project_c_args = []
 test_c_args = [
