@@ -23,7 +23,7 @@
   <developer id="org.gnome.Memerist">
     <name>Giovanni</name>
   </developer>
-  <url type="homepage">https://github.com/Vani1-2/gnome-meme-generator</url>
+  <url type="homepage">https://github.com/Vani1-2/gnome-meme-editor</url>
   <translation type="gettext">memerist</translation>
   <launchable type="desktop-id">org.gnome.Memerist.desktop</launchable>
   <content_rating type="oars-1.1" />

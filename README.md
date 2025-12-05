@@ -37,9 +37,9 @@
 ## Installation
 
 ### Fedora Copr
-Packages from [Releases](https://github.com/Vani1-2/gnome-meme-generator/releases) are old and outdated,
+Packages from [Releases](https://github.com/Vani1-2/gnome-meme-editor/releases) are old and outdated,
 Install latest build using Copr:
-
+    
 ```bash
 sudo dnf copr enable vaniiiiii/memerist 
 sudo dnf install memerist
@@ -71,7 +71,7 @@ sudo pacman -S gtk4 libadwaita meson ninja
 
 ```bash
 # Clone the repository
-git clone https://github.com/Vani1-2/gnome-meme-generator.git
+git clone https://github.com/Vani1-2/gnome-meme-editor.git
 cd gnome-meme-generator
 
 # Configure the build

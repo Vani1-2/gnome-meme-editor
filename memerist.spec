@@ -3,7 +3,7 @@ Version:        0.0.68.beta.1
 Release:        1%{?dist}
 Summary:        Meme generator with text overlays
 License:        GPL-3.0-or-later
-URL:            https://github.com/Vani1-2/gnome-meme-generator
+URL:            https://github.com/Vani1-2/gnome-meme-editor
 Source0:        memerist-%{version}.tar.gz
 
 BuildRequires:  meson gcc pkgconfig(gtk4) pkgconfig(libadwaita-1) pkgconfig(cairo) desktop-file-utils
