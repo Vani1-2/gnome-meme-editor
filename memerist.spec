@@ -1,6 +1,6 @@
 Name:           memerist
-Version:        0.0.65.beta.3
-Release:        1%{?dist}
+Version:        0.0.65.beta.6
+Release:        2%{?dist}
 Summary:        Meme generator with text overlays
 License:        GPL-3.0-or-later
 URL:            https://github.com/Vani1-2/gnome-meme-generator
@@ -29,31 +29,10 @@ Create memes with custom text overlays using a native GNOME interface.
 %{_datadir}/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
 %{_datadir}/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
 %dir %{_datadir}/Memerist
-%{_datadir}/Memerist/templates/*
-
-%post
-/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
-/usr/bin/update-desktop-database &> /dev/null || :
-mkdir -p /usr/local/share/icons/hicolor/scalable/apps
-mkdir -p /usr/local/share/icons/hicolor/symbolic/apps
-ln -sf /usr/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg /usr/local/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
-ln -sf /usr/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg /usr/local/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
-/usr/bin/gtk-update-icon-cache /usr/local/share/icons/hicolor &> /dev/null || :
-/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
-
-%postun
-/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas &> /dev/null || :
-/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
-/usr/bin/update-desktop-database &> /dev/null || :
-rm -f /usr/local/share/icons/hicolor/scalable/apps/org.gnome.Memerist.svg
-rm -f /usr/local/share/icons/hicolor/symbolic/apps/org.gnome.Memerist-symbolic.svg
-
-
-
-
+%{_datadir}/Memerist/templates/
 
 
 
 %changelog
-* Fri Nov 28 2025 Giovanni <giovannirafanan609@gmail.com> - 0.0.55.beta.5
-- Optimized overall code for utmost efficiency
+* Fri Dec 05 2025 Giovanni <giovannirafanan609@gmail.com> - 0.0.65.beta.6
+- removed unnecessary lines of code

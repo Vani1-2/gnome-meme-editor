@@ -37,27 +37,14 @@
 ## Installation
 
 ### Fedora Copr
-Starting this commit I will no longer upload ``.rpm`` packages here on github,
-you may use the copr repo instead:
-
+Packages from [Releases](https://github.com/Vani1-2/gnome-meme-generator/releases) are old and outdated,
+Install latest build using Copr:
 
 ```bash
 sudo dnf copr enable vaniiiiii/memerist 
 sudo dnf install memerist
 ```
 
-
-### Pre-built Packages
-
-Download the latest `.rpm` package for x86_64 from the [Releases](https://github.com/Vani1-2/gnome-meme-generator/releases) section.
-
-```bash
-sudo rpm -i memerist-*.rpm
-```
-or
-```bash
-sudo dnf install ./memerist-*.rpm
-```
 
 ### Building from Source
 
