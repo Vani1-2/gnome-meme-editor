@@ -122,7 +122,7 @@
                             <child>
                               <object class="GtkImage" id="meme_preview">
                                 <property name="icon-name">image-x-generic-symbolic</property>
-                                <property name="pixel-size">512</property>
+                                <property name="pixel-size">640</property>
                               </object>
                             </child>
                           </object>
