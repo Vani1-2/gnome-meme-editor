@@ -1,5 +1,5 @@
 Name:           memerist
-Version:        0.0.55.beta.5
+Version:        0.0.65.beta.3
 Release:        1%{?dist}
 Summary:        Meme generator with text overlays
 License:        GPL-3.0-or-later
