@@ -806,6 +806,25 @@ render_meme (MyappWindow *self)
     cairo_surface_flush (surface);
     cairo_destroy (cr);
 
+
+    {
+        unsigned char *pixels = gdk_pixbuf_get_pixels (rgba_pixbuf);
+        int rowstride = gdk_pixbuf_get_rowstride (rgba_pixbuf);
+        int n_channels = gdk_pixbuf_get_n_channels (rgba_pixbuf);
+        int x, y;
+
+        for (y = 0; y < height; y++) {
+            unsigned char *p = pixels + y * rowstride;
+            for (x = 0; x < width; x++) {
+                unsigned char tmp = p[0];
+                p[0] = p[2];
+                p[2] = tmp;
+                p += n_channels;
+            }
+        }
+    }
+
+
     g_clear_object (&self->final_meme);
     self->final_meme = rgba_pixbuf;
 
