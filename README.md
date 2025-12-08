@@ -12,7 +12,11 @@
   A modern meme editor built with GTK 4 and Libadwaita for the GNOME desktop.
 </p>
 
-
+<p align="left">
+  <a href="https://copr.fedorainfracloud.org/coprs/vaniiiiii/memerist">
+    <img src="https://img.shields.io/badge/📦_Copr-294172?style=for-the-badge&logo=fedora&logoColor=white" alt="Copr">
+  </a>
+</p>
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/vaniiiiii/memerist/package/memerist/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/vaniiiiii/memerist/package/memerist/)
 
