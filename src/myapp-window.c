@@ -281,7 +281,7 @@ myapp_window_init (MyappWindow *self)
 static char *
 get_user_template_dir (void)
 {
-  return g_build_filename (g_get_user_data_dir (), "Memerist", "templates", NULL);
+return g_build_filename (g_get_user_data_dir (), "io.github.vani1_2.memerist", "templates", NULL);
 }
 
 static gboolean
@@ -325,7 +325,7 @@ populate_template_gallery (MyappWindow *self)
 #ifdef TEMPLATE_DIR
   scan_directory_for_templates (self, TEMPLATE_DIR);
 #else
-  scan_directory_for_templates (self, "/usr/share/Memerist/templates");
+scan_directory_for_templates (self, "/usr/share/io.github.vani1_2.memerist/templates");
 #endif
   user_dir = get_user_template_dir ();
   g_mkdir_with_parents (user_dir, 0755);
