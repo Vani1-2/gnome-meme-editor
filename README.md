@@ -80,6 +80,8 @@ sudo apt install libgtk-4-dev libadwaita-1-dev meson ninja-build
 ```
 
 **Arch Linux:**
+There is already a PKGBUILD file available, but if you insist:
+
 ```bash
 sudo pacman -S gtk4 libadwaita meson ninja
 ```
