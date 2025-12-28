@@ -49,7 +49,7 @@
 
 ## Installation
 
-### Fedora Copr
+### Fedora and other RPM based distros
 Install latest build using Copr( Supports amd64 & aarch64 ):
     
 ```bash
@@ -57,7 +57,8 @@ sudo dnf copr enable vaniiiiii/memerist
 sudo dnf install memerist
 ```
 ### Debian/Ubuntu
-Download the latest `.deb` file using this command( only available as amd64 )
+Download the latest build on the [Releases page](https://github.com/Vani1-2/gnome-meme-editor/releases)
+or using this command( only available as amd64 ):
 ```bash
 curl -SL https://raw.githubusercontent.com/Vani1-2/gnome-meme-editor/main/scripts/install-deb.sh | bash
 ```
