@@ -34,13 +34,10 @@
 
 typedef enum {
   DRAG_TYPE_NONE,
-  DRAG_TYPE_TOP_TEXT,
-  DRAG_TYPE_BOTTOM_TEXT,
   DRAG_TYPE_IMAGE_MOVE,
   DRAG_TYPE_IMAGE_RESIZE
 } DragType;
 
-// blend modes, lmao what the fuck am I doing with my life
 typedef enum {
   BLEND_NORMAL,
   BLEND_MULTIPLY,
@@ -520,7 +517,6 @@ on_template_selected (GtkFlowBox *flowbox, GtkFlowBoxChild *child, MyappWindow *
 }
 
 
-
 static void
 on_import_template_response (GObject *s, GAsyncResult *r, gpointer d) {
   GtkFileDialog *dialog = GTK_FILE_DIALOG (s);
@@ -563,9 +559,6 @@ on_import_template_clicked (MyappWindow *self) {
 }
 
 
-
-
-
 static void
 on_delete_confirm_response (GObject *s, GAsyncResult *r, gpointer d) {
   GtkAlertDialog *dialog = GTK_ALERT_DIALOG (s);
@@ -586,8 +579,6 @@ on_delete_confirm_response (GObject *s, GAsyncResult *r, gpointer d) {
   }
   g_clear_error (&error);
 }
-
-
 
 
 static void
@@ -748,7 +739,6 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self) {
   render_meme(self);
 }
 
-//finalize text position
 static void
 on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, MyappWindow *self) {
   double delta_x, delta_y;
@@ -972,11 +962,6 @@ apply_deep_fry (GdkPixbuf *src) {
 }
 
 
-
-
-
-
-
 // Stop and think, You are about to enter a place called the void.
 // The rendering logic is so fragile, any code change here can destroy a whole function
 // Do not edit carelessly, consider what you're about to do Tarnished.
@@ -985,16 +970,9 @@ apply_deep_fry (GdkPixbuf *src) {
 
 
 
-
-
-
-
-
-
-// ok I replaced this thing entirely making loop to through layers
+// ok I replaced this thing entirely making it loop to through layers
 // and deciding whether to draw text or images
-static void
-render_meme (MyappWindow *self) {
+static void render_meme (MyappWindow *self) {
   int width, height;
   cairo_surface_t *surface;
   cairo_t *cr;
@@ -1110,7 +1088,7 @@ render_meme (MyappWindow *self) {
 
   if (composite_pixbuf == NULL) return;
 
-  //apply cool effects, lmao
+
   if (gtk_toggle_button_get_active(self->cinematic_button)) {
      cinematic = apply_saturation_contrast(composite_pixbuf, 1.15, 1.05);
      if (cinematic) { g_object_unref(composite_pixbuf); composite_pixbuf = cinematic; }
@@ -1138,7 +1116,6 @@ static void on_deep_fry_toggled (GtkToggleButton *btn, MyappWindow *self) {
   if (self->template_image) render_meme (self);
 }
 
-//Deep Fry LMAO
 static void on_load_image_response (GObject *s, GAsyncResult *r, gpointer d) {
   GtkFileDialog *dialog = GTK_FILE_DIALOG (s);
   MyappWindow *self = MYAPP_WINDOW (d);
