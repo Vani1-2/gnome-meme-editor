@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <component type="desktop-application">
   <id>io.github.vani1_2.memerist</id>
   <metadata_license>CC0-1.0</metadata_license>
@@ -34,21 +34,22 @@
 <screenshots>
   <screenshot type="default">
     <caption>Main window</caption>
-    <image>https://raw.githubusercontent.com/Vani1-2/gnome-meme-editor/main/assets/screenshot1.png</image>
+    <image
+            >https://raw.githubusercontent.com/Vani1-2/gnome-meme-editor/main/assets/screenshot1.png</image>
   </screenshot>
   <screenshot>
     <caption>About menu</caption>
-    <image>https://raw.githubusercontent.com/Vani1-2/gnome-meme-editor/main/assets/screenshot2.png</image>
+    <image
+            >https://raw.githubusercontent.com/Vani1-2/gnome-meme-editor/main/assets/screenshot2.png</image>
   </screenshot>
 </screenshots>
   <releases>
-    <release version="0.0.2" date="2025-01-15">
+    <release version="0.1.5" date="2026-01-2">
       <description translate="no">
-        <p>Initial alpha release</p>
         <ul>
           <li>Load images and add text overlays</li>
           <li>Drag and drop text positioning</li>
-          <li>Dark mode support via menu</li>
+          <li>Add filters to your meme</li>
           <li>Export memes as PNG</li>
         </ul>
       </description>
