@@ -20,6 +20,7 @@
 
 
 #include "myapp-window.h"
+#include "adwaita.h"
 #include <cairo.h>
 #include <math.h>
 #include <stdlib.h>
@@ -61,9 +62,13 @@ typedef struct {
   BlendMode blend_mode;
 } ImageLayer;
 
-struct _MyappWindow
-{
+struct _MyappWindow {
+    
   AdwApplicationWindow parent_instance;
+  AdwPreferencesGroup *layer_group;
+  AdwPreferencesGroup *templates_group;
+  AdwPreferencesGroup *transform_group;
+  AdwOverlaySplitView *split_view;
   GtkStack        *content_stack;
   GtkImage        *meme_preview;
   GtkImage        *add_text_button;
@@ -99,7 +104,14 @@ struct _MyappWindow
 
   DragType        drag_type;
   GtkGestureDrag *drag_gesture;
-
+  GtkButton *crop_mode_button;
+  GtkButton *rotate_left_button;
+  GtkButton *rotate_right_button;
+  GtkButton *flip_h_button;
+  GtkButton *flip_v_button;
+  GtkButton *crop_square_button;
+  GtkButton *crop_43_button;
+  GtkButton *crop_169_button;
   double          drag_start_x;
   double          drag_start_y;
   double          drag_obj_start_x;
@@ -270,12 +282,17 @@ myapp_window_class_init (MyappWindowClass *klass) {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = myapp_window_finalize;
-
+  
+  
   gtk_widget_class_set_template_from_resource (widget_class,"/io/github/vani1_2/memerist/myapp-window.ui");
 
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_group);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, templates_group);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, transform_group);
+  
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, meme_preview);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, content_stack);
-
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, split_view);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, add_text_button);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_text_entry);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_font_size);
@@ -294,6 +311,16 @@ myapp_window_class_init (MyappWindowClass *klass) {
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_rotation_scale);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, blend_mode_row);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, delete_layer_button);
+  
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_mode_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, rotate_left_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, rotate_right_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, flip_h_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, flip_v_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_square_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_43_button);
+  gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_169_button);
+  
 }
 
 static gboolean
@@ -384,6 +411,95 @@ on_key_pressed (GtkEventControllerKey *controller, guint keyval, guint keycode, 
   return FALSE;
 }
 
+
+
+static void
+update_template_image (MyappWindow *self, GdkPixbuf *new_pixbuf) {
+  if (!new_pixbuf) return;
+  
+  push_undo (self); 
+  
+  if (self->template_image) g_object_unref (self->template_image);
+  self->template_image = new_pixbuf;
+  
+  render_meme (self);
+}
+
+static void
+on_rotate_clicked (GtkWidget *btn, MyappWindow *self) {
+  gboolean clockwise;
+  GdkPixbuf *new_pix;
+
+  if (!self->template_image) return;
+  
+  clockwise = (btn == GTK_WIDGET (self->rotate_right_button));
+  new_pix = gdk_pixbuf_rotate_simple (self->template_image, 
+      clockwise ? GDK_PIXBUF_ROTATE_CLOCKWISE : GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE);
+      
+  update_template_image (self, new_pix);
+}
+
+static void
+on_flip_clicked (GtkWidget *btn, MyappWindow *self) {
+  gboolean horizontal;
+  GdkPixbuf *new_pix;
+
+  if (!self->template_image) return;
+
+  horizontal = (btn == GTK_WIDGET (self->flip_h_button));
+  new_pix = gdk_pixbuf_flip (self->template_image, horizontal);
+
+  update_template_image (self, new_pix);
+}
+
+static void
+on_crop_preset_clicked (GtkWidget *btn, MyappWindow *self) {
+  int w, h, new_w, new_h;
+  double target_ratio = 1.0;
+  GdkPixbuf *new_pix;
+  GdkPixbuf *copy;
+
+  if (!self->template_image) return;
+
+  w = gdk_pixbuf_get_width (self->template_image);
+  h = gdk_pixbuf_get_height (self->template_image);
+  new_w = w;
+  new_h = h;
+
+  if (btn == GTK_WIDGET (self->crop_square_button)) target_ratio = 1.0;
+  else if (btn == GTK_WIDGET (self->crop_43_button)) target_ratio = 4.0/3.0;
+  else if (btn == GTK_WIDGET (self->crop_169_button)) target_ratio = 16.0/9.0;
+
+  if ((double)w / h > target_ratio) {
+      new_h = h;
+      new_w = h * target_ratio;
+  } else {
+      new_w = w;
+      new_h = w / target_ratio;
+  }
+
+  new_pix = gdk_pixbuf_new_subpixbuf (self->template_image, (w - new_w) / 2, (h - new_h) / 2, new_w, new_h);
+  copy = gdk_pixbuf_copy (new_pix);
+  g_object_unref (new_pix);
+  
+  update_template_image (self, copy);
+}
+
+static void
+on_crop_mode_toggled (GtkToggleButton *btn, MyappWindow *self) {
+  gboolean active = gtk_toggle_button_get_active (btn);
+
+  gtk_widget_set_visible (GTK_WIDGET (self->transform_group), active);
+  gtk_widget_set_visible (GTK_WIDGET (self->layer_group), !active);
+  gtk_widget_set_visible (GTK_WIDGET (self->templates_group), !active);
+
+  if (active) {
+    adw_overlay_split_view_set_show_sidebar (self->split_view, TRUE);
+  }
+}
+
+
+
 static void
 myapp_window_init (MyappWindow *self) {
   GtkEventController *motion;
@@ -397,7 +513,19 @@ myapp_window_init (MyappWindow *self) {
   self->selected_layer = NULL;
   self->undo_stack = NULL;
   self->redo_stack = NULL;
-
+  
+  g_signal_connect (self->rotate_left_button, "clicked", G_CALLBACK (on_rotate_clicked), self);
+  g_signal_connect (self->rotate_right_button, "clicked", G_CALLBACK (on_rotate_clicked), self);
+  g_signal_connect (self->flip_h_button, "clicked", G_CALLBACK (on_flip_clicked), self);
+  g_signal_connect (self->flip_v_button, "clicked", G_CALLBACK (on_flip_clicked), self);
+  g_signal_connect (self->crop_square_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
+  g_signal_connect (self->crop_43_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
+  g_signal_connect (self->crop_169_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
+  
+  //crop
+  gtk_widget_set_sensitive (GTK_WIDGET (self->crop_mode_button), TRUE);
+  g_signal_connect (self->crop_mode_button, "toggled", G_CALLBACK (on_crop_mode_toggled), self);
+  //son of a bitch there is just too many of them, what the fuck 
   g_signal_connect_swapped (self->add_text_button, "clicked", G_CALLBACK (on_add_text_clicked), self);
   g_signal_connect_swapped (self->layer_text_entry, "changed", G_CALLBACK (on_layer_text_changed), self);
   g_signal_connect_swapped (self->layer_font_size, "value-changed", G_CALLBACK (on_layer_text_changed), self);

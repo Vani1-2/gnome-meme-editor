@@ -14,8 +14,8 @@
 
   <template class="MyappWindow" parent="AdwApplicationWindow">
     <property name="title" translatable="yes">Meme Editor</property>
-    <property name="default-width">1000</property>
-    <property name="default-height">700</property>
+    <property name="default-width">1130</property>
+    <property name="default-height">650</property>
     <property name="content">
 
       <object class="AdwToolbarView">
@@ -32,6 +32,14 @@
               <object class="GtkButton" id="load_image_button">
                 <property name="icon-name">document-open-symbolic</property>
                 <property name="tooltip-text">Open Base Image</property>
+              </object>
+            </child>
+
+            <child type="start">
+              <object class="GtkToggleButton" id="crop_mode_button">
+                <property name="icon-name">edit-cut-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Crop &amp; Rotate</property>
+                <property name="sensitive">false</property>
               </object>
             </child>
 
@@ -142,7 +150,7 @@
                     </style>
 
                     <child>
-                       <object class="GtkButton" id="add_image_button">
+                      <object class="GtkButton" id="add_image_button">
                         <property name="icon-name">insert-image-symbolic</property>
                         <property name="tooltip-text">Add Overlay Image</property>
                         <property name="sensitive">false</property>
@@ -210,7 +218,7 @@
                           <property name="tooltip-text">Clear All</property>
                           <property name="sensitive">false</property>
                           <style><class name="destructive-action"/></style>
-                      </object>
+                       </object>
                     </child>
                   </object>
                 </child>
@@ -221,7 +229,7 @@
               <object class="AdwPreferencesPage">
 
                 <child>
-                  <object class="AdwPreferencesGroup">
+                  <object class="AdwPreferencesGroup" id="layer_group">
                     <property name="title">Selected Layer</property>
 
                     <child>
@@ -283,7 +291,7 @@
                       <object class="AdwActionRow">
                         <property name="title">Rotation</property>
                         <child>
-                           <object class="GtkScale" id="layer_rotation_scale">
+                          <object class="GtkScale" id="layer_rotation_scale">
                             <property name="hexpand">true</property>
                             <property name="width-request">100</property>
                             <property name="draw-value">false</property>
@@ -293,7 +301,7 @@
                                 <property name="upper">6.28</property>
                                 <property name="value">0.0</property>
                                 <property name="step-increment">0.1</property>
-                              </object>
+                             </object>
                             </property>
                           </object>
                         </child>
@@ -315,17 +323,17 @@
                 </child>
 
                 <child>
-                   <object class="AdwPreferencesGroup">
+                   <object class="AdwPreferencesGroup" id="templates_group">
                       <property name="title">Templates</property>
                       <child>
-                         <object class="AdwExpanderRow">
+                        <object class="AdwExpanderRow">
                             <property name="title">Gallery</property>
                             <property name="expanded">true</property>
                             <child type="suffix">
-                               <object class="GtkButton" id="import_template_button">
+                                <object class="GtkButton" id="import_template_button">
                                   <property name="icon-name">list-add-symbolic</property>
                                   <style><class name="flat"/></style>
-                               </object>
+                                </object>
                             </child>
                             <child type="suffix">
                                 <object class="GtkButton" id="delete_template_button">
@@ -350,12 +358,103 @@
                                   </child>
                                 </object>
                             </child>
-                         </object>
+                        </object>
                       </child>
                    </object>
                 </child>
+
+                <child>
+                  <object class="AdwPreferencesGroup" id="transform_group">
+                    <property name="title">Transform</property>
+                    <property name="visible">false</property>
+
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title">Rotate</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="valign">center</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkButton" id="rotate_left_button">
+                                <property name="icon-name">object-rotate-left-symbolic</property>
+                                <property name="tooltip-text">Rotate Left</property>
+                                <style><class name="flat"/></style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rotate_right_button">
+                                <property name="icon-name">object-rotate-right-symbolic</property>
+                                <property name="tooltip-text">Rotate Right</property>
+                                <style><class name="flat"/></style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title">Flip</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="valign">center</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkButton" id="flip_h_button">
+                                <property name="icon-name">object-flip-horizontal-symbolic</property>
+                                <property name="tooltip-text">Flip Horizontal</property>
+                                <style><class name="flat"/></style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="flip_v_button">
+                                <property name="icon-name">object-flip-vertical-symbolic</property>
+                                <property name="tooltip-text">Flip Vertical</property>
+                                <style><class name="flat"/></style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title">Crop</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">6</property>
+                            <child>
+                               <object class="GtkButton" id="crop_square_button">
+                                 <property name="label">1:1</property>
+                                 <style><class name="flat"/></style>
+                               </object>
+                            </child>
+                            <child>
+                               <object class="GtkButton" id="crop_43_button">
+                                 <property name="label">4:3</property>
+                                 <style><class name="flat"/></style>
+                               </object>
+                            </child>
+                            <child>
+                               <object class="GtkButton" id="crop_169_button">
+                                 <property name="label">16:9</property>
+                                 <style><class name="flat"/></style>
+                               </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                  </object>
+                </child>
+
               </object>
             </property>
+
           </object>
         </property>
 
