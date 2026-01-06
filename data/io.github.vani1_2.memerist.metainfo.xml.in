@@ -44,13 +44,10 @@
   </screenshot>
 </screenshots>
   <releases>
-    <release version="0.1.5" date="2026-01-2">
+    <release version="0.2.1" date="2026-1-6">
       <description translate="no">
         <ul>
-          <li>Load images and add text overlays</li>
-          <li>Drag and drop text positioning</li>
-          <li>Add filters to your meme</li>
-          <li>Export memes as PNG</li>
+          <li>minor bug fixes</li>
         </ul>
       </description>
     </release>
