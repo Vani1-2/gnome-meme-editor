@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  A modern meme editor built with GTK 4 and Libadwaita for the GNOME desktop.
+  A modern meme editor built with GTK 4 and Libadwaita.
 </p>
 
 <p align="left">
@@ -126,7 +126,7 @@ This project is open source. Please check the LICENSE file for details.
 
 ## Acknowledgments
 
-Built with GTK 4 and Libadwaita for the GNOME desktop environment.
+Built with GTK4 and Libadwaita.
 
 
 
