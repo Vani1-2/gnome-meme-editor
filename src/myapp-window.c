@@ -115,12 +115,12 @@ struct _MyappWindow {
   GtkButton *crop_square_button;
   GtkButton *crop_43_button;
   GtkButton *crop_169_button;
-  double          drag_start_x;
-  double          drag_start_y;
-  double          drag_obj_start_x;
-  double          drag_obj_start_y;
-  double          drag_obj_start_scale;
-
+  double drag_start_x;
+  double drag_start_y;
+  double drag_obj_start_x;
+  double drag_obj_start_y;
+  double drag_obj_start_scale;
+  double drag_obj_start_h;
   // Crop state
   double crop_x;
   double crop_y;
@@ -969,6 +969,7 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self) {
       self->drag_obj_start_x = self->crop_x;
       self->drag_obj_start_y = self->crop_y;
       self->drag_obj_start_scale = self->crop_w; 
+      self->drag_obj_start_h = self->crop_h; // <--- SAVE HEIGHT HERE
       return; 
   }
 
@@ -1060,7 +1061,7 @@ on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, Myapp
       double new_w = self->drag_obj_start_scale + delta_x;
       // Assume aspect change allowed, height delta uses standard coords but needs logic if keeping aspect
       // Simple freeform resize for now:
-      double new_h = (self->crop_h) + delta_y; 
+      double new_h = self->drag_obj_start_h + delta_y;
       
       self->crop_w = CLAMP(new_w, 0.1, 1.0 - self->crop_x);
       self->crop_h = CLAMP(new_h, 0.1, 1.0 - self->crop_y);
@@ -1283,8 +1284,8 @@ apply_deep_fry (GdkPixbuf *src) {
 
 
 
-// ok I replaced this thing entirely making it loop to through layers
-// and deciding whether to draw text or images
+// uhhhh, rewrote almost the goddamn render function just for a
+// crop function
 static void render_meme (MyappWindow *self) {
   int width, height;
   cairo_surface_t *surface;
@@ -1294,7 +1295,6 @@ static void render_meme (MyappWindow *self) {
   GList *l;
   ImageLayer *layer;
   double draw_x, draw_y;
-  double hw, hh;
   GdkPixbuf *cinematic;
   GdkPixbuf *fried;
 
@@ -1303,118 +1303,53 @@ static void render_meme (MyappWindow *self) {
   width = gdk_pixbuf_get_width (self->template_image);
   height = gdk_pixbuf_get_height (self->template_image);
 
+  
   surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
   cr = cairo_create (surface);
 
-
-  cairo_save (cr);
   gdk_cairo_set_source_pixbuf (cr, self->template_image, 0.0, 0.0);
   cairo_paint (cr);
-  cairo_restore (cr);
-
 
   for (l = self->layers; l != NULL; l = l->next) {
     layer = (ImageLayer *)l->data;
-
     draw_x = layer->x * width;
     draw_y = layer->y * height;
 
     cairo_save (cr);
-
-
     cairo_translate (cr, draw_x, draw_y);
     cairo_rotate (cr, layer->rotation);
     cairo_scale (cr, layer->scale, layer->scale);
-
 
     if (layer->blend_mode == BLEND_MULTIPLY) cairo_set_operator(cr, CAIRO_OPERATOR_MULTIPLY);
     else if (layer->blend_mode == BLEND_SCREEN) cairo_set_operator(cr, CAIRO_OPERATOR_SCREEN);
     else if (layer->blend_mode == BLEND_OVERLAY) cairo_set_operator(cr, CAIRO_OPERATOR_OVERLAY);
     else cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
-
     if (layer->type == LAYER_TYPE_IMAGE && layer->pixbuf) {
        gdk_cairo_set_source_pixbuf (cr, layer->pixbuf, -layer->width/2.0, -layer->height/2.0);
        if (layer->opacity < 1.0) cairo_paint_with_alpha (cr, layer->opacity);
        else cairo_paint (cr);
     }
-
     else if (layer->type == LAYER_TYPE_TEXT && layer->text) {
        cairo_text_extents_t extents;
-       double off_x, off_y;
-
        cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
        cairo_set_font_size (cr, layer->font_size);
        cairo_text_extents (cr, layer->text, &extents);
-
-
+       
        layer->width = extents.width + 10;
        layer->height = extents.height + 10;
 
-
-       off_x = -(extents.width/2.0 + extents.x_bearing);
-       off_y = -(extents.height/2.0 + extents.y_bearing);
-
-       cairo_move_to (cr, off_x, off_y);
+       cairo_move_to (cr, -(extents.width/2.0 + extents.x_bearing), -(extents.height/2.0 + extents.y_bearing));
        cairo_text_path (cr, layer->text);
-
+       
        cairo_set_source_rgba (cr, 0, 0, 0, layer->opacity);
        cairo_set_line_width (cr, layer->font_size * 0.08);
        cairo_stroke_preserve (cr);
-
+       
        cairo_set_source_rgba (cr, 1, 1, 1, layer->opacity);
        cairo_fill (cr);
     }
-
     cairo_restore (cr);
-  }
-
-  // CROP OVERLAY
-  if (gtk_toggle_button_get_active(self->crop_mode_button)) {
-      double cx = self->crop_x * width;
-      double cy = self->crop_y * height;
-      double cw = self->crop_w * width;
-      double ch = self->crop_h * height;
-
-      // Draw dimming rects around the crop box (4-rect method)
-      // This ensures the center remains bright (untouched)
-      cairo_set_source_rgba(cr, 0, 0, 0, 0.6);
-
-      // Top
-      if (cy > 0) {
-        cairo_rectangle(cr, 0, 0, width, cy);
-        cairo_fill(cr);
-      }
-      // Bottom
-      if (cy + ch < height) {
-        cairo_rectangle(cr, 0, cy + ch, width, height - (cy + ch));
-        cairo_fill(cr);
-      }
-      // Left (between top and bottom y)
-      if (cx > 0) {
-        cairo_rectangle(cr, 0, cy, cx, ch);
-        cairo_fill(cr);
-      }
-      // Right (between top and bottom y)
-      if (cx + cw < width) {
-        cairo_rectangle(cr, cx + cw, cy, width - (cx + cw), ch);
-        cairo_fill(cr);
-      }
-
-      // Draw crop border
-      cairo_set_source_rgba(cr, 1, 1, 1, 0.9);
-      cairo_set_line_width(cr, 2.0);
-      cairo_rectangle(cr, cx, cy, cw, ch);
-      cairo_stroke(cr);
-
-      // Rule of thirds grid
-      cairo_set_source_rgba(cr, 1, 1, 1, 0.3);
-      cairo_set_line_width(cr, 1.0);
-      cairo_move_to(cr, cx + cw/3.0, cy); cairo_line_to(cr, cx + cw/3.0, cy + ch);
-      cairo_move_to(cr, cx + 2*cw/3.0, cy); cairo_line_to(cr, cx + 2*cw/3.0, cy + ch);
-      cairo_move_to(cr, cx, cy + ch/3.0); cairo_line_to(cr, cx + cw, cy + ch/3.0);
-      cairo_move_to(cr, cx, cy + 2*ch/3.0); cairo_line_to(cr, cx + cw, cy + 2*ch/3.0);
-      cairo_stroke(cr);
   }
 
   cairo_surface_flush (surface);
@@ -1427,56 +1362,82 @@ static void render_meme (MyappWindow *self) {
 
   if (composite_pixbuf == NULL) return;
 
-
+  
   if (self->drag_type == DRAG_TYPE_NONE) { 
     if (gtk_toggle_button_get_active(self->cinematic_button)) {
-            cinematic = apply_saturation_contrast(composite_pixbuf, 1.15, 1.05);
-            if (cinematic) { g_object_unref(composite_pixbuf); composite_pixbuf = cinematic; }
-        }
-  
-    if (gtk_toggle_button_get_active (self->deep_fry_button)) {
-            fried = apply_deep_fry (composite_pixbuf);
-            if (fried) { g_object_unref (composite_pixbuf); composite_pixbuf = fried; }
-        }
+        cinematic = apply_saturation_contrast(composite_pixbuf, 1.15, 1.05);
+        if (cinematic) { g_object_unref(composite_pixbuf); composite_pixbuf = cinematic; }
     }
+    if (gtk_toggle_button_get_active (self->deep_fry_button)) {
+        fried = apply_deep_fry (composite_pixbuf);
+        if (fried) { g_object_unref (composite_pixbuf); composite_pixbuf = fried; }
+    }
+  }
 
+  
   g_clear_object (&self->final_meme);
   self->final_meme = g_object_ref(composite_pixbuf);
 
-  // SELECTION HIGHLIGHT
-  if (self->selected_layer && !gtk_toggle_button_get_active(self->crop_mode_button)) {
-      cairo_surface_t *overlay_surf = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
-      cairo_t *overlay_cr = cairo_create (overlay_surf);
-      
-      gdk_cairo_set_source_pixbuf(overlay_cr, composite_pixbuf, 0, 0);
-      cairo_paint(overlay_cr);
-      
-      layer = self->selected_layer;
-      draw_x = layer->x * width;
-      draw_y = layer->y * height;
-      double box_w = layer->width * layer->scale;
-      double box_h = layer->height * layer->scale;
-      hw = box_w / 2.0;
-      hh = box_h / 2.0;
+  cairo_surface_t *overlay_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+  cairo_t *cr_ov = cairo_create(overlay_surf);
+  
+  
+  gdk_cairo_set_source_pixbuf(cr_ov, composite_pixbuf, 0, 0);
+  cairo_paint(cr_ov);
 
-      cairo_save(overlay_cr);
-      cairo_translate (overlay_cr, draw_x, draw_y);
-      cairo_rotate (overlay_cr, layer->rotation);
+  
+  if (gtk_toggle_button_get_active(self->crop_mode_button)) {
+      double cx = self->crop_x * width;
+      double cy = self->crop_y * height;
+      double cw = self->crop_w * width;
+      double ch = self->crop_h * height;
 
-      cairo_set_source_rgba (overlay_cr, 0.4, 0.2, 0.8, 0.8);
-      cairo_set_line_width (overlay_cr, 2.0);
-      cairo_rectangle (overlay_cr, -hw, -hh, box_w, box_h);
-      cairo_stroke (overlay_cr);
-      cairo_restore(overlay_cr);
       
-      cairo_destroy(overlay_cr);
+      cairo_set_source_rgba(cr_ov, 0, 0, 0, 0.6);
+      if (cy > 0) { cairo_rectangle(cr_ov, 0, 0, width, cy); cairo_fill(cr_ov); }
+      if (cy + ch < height) { cairo_rectangle(cr_ov, 0, cy + ch, width, height - (cy + ch)); cairo_fill(cr_ov); }
+      if (cx > 0) { cairo_rectangle(cr_ov, 0, cy, cx, ch); cairo_fill(cr_ov); }
+      if (cx + cw < width) { cairo_rectangle(cr_ov, cx + cw, cy, width - (cx + cw), ch); cairo_fill(cr_ov); }
+
       
-      g_object_unref(composite_pixbuf);
-      G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-      composite_pixbuf = gdk_pixbuf_get_from_surface(overlay_surf, 0, 0, width, height);
-      G_GNUC_END_IGNORE_DEPRECATIONS
-      cairo_surface_destroy(overlay_surf);
+      cairo_set_source_rgba(cr_ov, 1, 1, 1, 0.9);
+      cairo_set_line_width(cr_ov, 2.0);
+      cairo_rectangle(cr_ov, cx, cy, cw, ch);
+      cairo_stroke(cr_ov);
+
+      
+      cairo_set_source_rgba(cr_ov, 1, 1, 1, 0.3);
+      cairo_set_line_width(cr_ov, 1.0);
+      cairo_move_to(cr_ov, cx + cw/3.0, cy); cairo_line_to(cr_ov, cx + cw/3.0, cy + ch);
+      cairo_move_to(cr_ov, cx + 2*cw/3.0, cy); cairo_line_to(cr_ov, cx + 2*cw/3.0, cy + ch);
+      cairo_move_to(cr_ov, cx, cy + ch/3.0); cairo_line_to(cr_ov, cx + cw, cy + ch/3.0);
+      cairo_move_to(cr_ov, cx, cy + 2*ch/3.0); cairo_line_to(cr_ov, cx + cw, cy + 2*ch/3.0);
+      cairo_stroke(cr_ov);
   }
+  else if (self->selected_layer) {
+      ImageLayer *sl = self->selected_layer;
+      double sx = sl->x * width;
+      double sy = sl->y * height;
+      double box_w = sl->width * sl->scale;
+      double box_h = sl->height * sl->scale;
+      
+      cairo_save(cr_ov);
+      cairo_translate(cr_ov, sx, sy);
+      cairo_rotate(cr_ov, sl->rotation);
+      cairo_set_source_rgba(cr_ov, 0.4, 0.2, 0.8, 0.8);
+      cairo_set_line_width(cr_ov, 2.0);
+      cairo_rectangle(cr_ov, -box_w/2.0, -box_h/2.0, box_w, box_h);
+      cairo_stroke(cr_ov);
+      cairo_restore(cr_ov);
+  }
+
+  cairo_destroy(cr_ov);
+  g_object_unref(composite_pixbuf);
+
+  G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+  composite_pixbuf = gdk_pixbuf_get_from_surface(overlay_surf, 0, 0, width, height);
+  G_GNUC_END_IGNORE_DEPRECATIONS
+  cairo_surface_destroy(overlay_surf);
 
   if (composite_pixbuf) {
     G_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -1544,8 +1505,32 @@ static void on_export_response (GObject *s, GAsyncResult *r, gpointer d) {
   GtkFileDialog *dialog = GTK_FILE_DIALOG (s);
   MyappWindow *self = MYAPP_WINDOW (d);
   GFile *file = gtk_file_dialog_save_finish (dialog, r, NULL);
+  
   if (file && self->final_meme) {
-    gdk_pixbuf_save (self->final_meme, g_file_get_path (file), "png", NULL, NULL);
+    GdkPixbuf *to_save = NULL;
+    if (gtk_toggle_button_get_active(self->crop_mode_button)) {
+        int iw = gdk_pixbuf_get_width(self->final_meme);
+        int ih = gdk_pixbuf_get_height(self->final_meme);
+        int x = (int)(self->crop_x * iw);
+        int y = (int)(self->crop_y * ih);
+        int w = (int)(self->crop_w * iw);
+        int h = (int)(self->crop_h * ih);
+
+        //sanity check???
+        // damn 
+        if (w > 0 && h > 0 && x >= 0 && y >= 0 && (x + w) <= iw && (y + h) <= ih) {
+            to_save = gdk_pixbuf_new_subpixbuf(self->final_meme, x, y, w, h);
+        } else {
+            
+            to_save = g_object_ref(self->final_meme);
+        }
+    } else {
+        to_save = g_object_ref(self->final_meme);
+    }
+
+    gdk_pixbuf_save (to_save, g_file_get_path (file), "png", NULL, NULL);
+    
+    if (to_save) g_object_unref (to_save);
     g_object_unref (file);
   }
 }
