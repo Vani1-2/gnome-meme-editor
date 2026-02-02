@@ -2,19 +2,6 @@
  *
  * Copyright 2025 Giovanni
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -35,6 +22,20 @@ typedef enum {
   DRAG_TYPE_CROP_MOVE,
   DRAG_TYPE_CROP_RESIZE
 } DragType;
+
+// NEW: Handles for 8-way resizing
+typedef enum {
+  HANDLE_NONE,
+  HANDLE_TOP_LEFT,
+  HANDLE_TOP,
+  HANDLE_TOP_RIGHT,
+  HANDLE_RIGHT,
+  HANDLE_BOTTOM_RIGHT,
+  HANDLE_BOTTOM,
+  HANDLE_BOTTOM_LEFT,
+  HANDLE_LEFT,
+  HANDLE_CENTER
+} ResizeHandle;
 
 typedef enum {
   BLEND_NORMAL,
@@ -64,7 +65,7 @@ typedef struct {
 } ImageLayer;
 
 struct _MyappWindow {
-    
+
   AdwApplicationWindow parent_instance;
   AdwPreferencesGroup *layer_group;
   AdwPreferencesGroup *templates_group;
@@ -105,9 +106,9 @@ struct _MyappWindow {
 
   DragType        drag_type;
   GtkGestureDrag *drag_gesture;
-  
+
   GtkToggleButton *crop_mode_button;
-  
+
   GtkButton *rotate_left_button;
   GtkButton *rotate_right_button;
   GtkButton *flip_h_button;
@@ -115,12 +116,17 @@ struct _MyappWindow {
   GtkButton *crop_square_button;
   GtkButton *crop_43_button;
   GtkButton *crop_169_button;
+  
   double drag_start_x;
   double drag_start_y;
   double drag_obj_start_x;
   double drag_obj_start_y;
-  double drag_obj_start_scale;
-  double drag_obj_start_h;
+  double drag_obj_start_scale; // Used as Width for crop
+  double drag_obj_start_h;     // Height for crop
+
+  // NEW: Store which handle is being dragged
+  ResizeHandle active_crop_handle;
+
   // Crop state
   double crop_x;
   double crop_y;
@@ -291,14 +297,14 @@ myapp_window_class_init (MyappWindowClass *klass) {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->finalize = myapp_window_finalize;
-  
-  
+
+
   gtk_widget_class_set_template_from_resource (widget_class,"/io/github/vani1_2/memerist/myapp-window.ui");
 
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_group);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, templates_group);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, transform_group);
-  
+
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, meme_preview);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, content_stack);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, split_view);
@@ -320,7 +326,7 @@ myapp_window_class_init (MyappWindowClass *klass) {
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, layer_rotation_scale);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, blend_mode_row);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, delete_layer_button);
-  
+
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_mode_button);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, rotate_left_button);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, rotate_right_button);
@@ -329,7 +335,7 @@ myapp_window_class_init (MyappWindowClass *klass) {
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_square_button);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_43_button);
   gtk_widget_class_bind_template_child (widget_class, MyappWindow, crop_169_button);
-  
+
   gtk_widget_class_bind_template_callback (widget_class, on_apply_crop_clicked);
 }
 
@@ -426,12 +432,12 @@ on_key_pressed (GtkEventControllerKey *controller, guint keyval, guint keycode, 
 static void
 update_template_image (MyappWindow *self, GdkPixbuf *new_pixbuf) {
   if (!new_pixbuf) return;
-  
-  push_undo (self); 
-  
+
+  push_undo (self);
+
   if (self->template_image) g_object_unref (self->template_image);
   self->template_image = new_pixbuf;
-  
+
   render_meme (self);
 }
 
@@ -441,11 +447,11 @@ on_rotate_clicked (GtkWidget *btn, MyappWindow *self) {
   GdkPixbuf *new_pix;
 
   if (!self->template_image) return;
-  
+
   clockwise = (btn == GTK_WIDGET (self->rotate_right_button));
-  new_pix = gdk_pixbuf_rotate_simple (self->template_image, 
+  new_pix = gdk_pixbuf_rotate_simple (self->template_image,
       clockwise ? GDK_PIXBUF_ROTATE_CLOCKWISE : GDK_PIXBUF_ROTATE_COUNTERCLOCKWISE);
-      
+
   update_template_image (self, new_pix);
 }
 
@@ -472,7 +478,7 @@ on_crop_preset_clicked (GtkWidget *btn, MyappWindow *self) {
 
   w = gdk_pixbuf_get_width (self->template_image);
   h = gdk_pixbuf_get_height (self->template_image);
-  
+
   current_ratio = (double)w / (double)h;
 
   if (btn == GTK_WIDGET (self->crop_square_button)) target_ratio = 1.0;
@@ -542,9 +548,9 @@ on_apply_crop_clicked (MyappWindow *self) {
   GdkPixbuf *sub = gdk_pixbuf_new_subpixbuf(self->template_image, x, y, w, h);
   GdkPixbuf *new_pix = gdk_pixbuf_copy(sub);
   g_object_unref(sub);
-  
+
   update_template_image(self, new_pix); // This calls render_meme
-  
+
   self->crop_x = 0; self->crop_y = 0; self->crop_w = 1; self->crop_h = 1;
   gtk_toggle_button_set_active(self->crop_mode_button, FALSE);
 }
@@ -563,7 +569,7 @@ myapp_window_init (MyappWindow *self) {
   self->selected_layer = NULL;
   self->undo_stack = NULL;
   self->redo_stack = NULL;
-  
+
   g_signal_connect (self->rotate_left_button, "clicked", G_CALLBACK (on_rotate_clicked), self);
   g_signal_connect (self->rotate_right_button, "clicked", G_CALLBACK (on_rotate_clicked), self);
   g_signal_connect (self->flip_h_button, "clicked", G_CALLBACK (on_flip_clicked), self);
@@ -571,11 +577,11 @@ myapp_window_init (MyappWindow *self) {
   g_signal_connect (self->crop_square_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
   g_signal_connect (self->crop_43_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
   g_signal_connect (self->crop_169_button, "clicked", G_CALLBACK (on_crop_preset_clicked), self);
-  
+
   //crop
   gtk_widget_set_sensitive (GTK_WIDGET (self->crop_mode_button), TRUE);
   g_signal_connect (self->crop_mode_button, "toggled", G_CALLBACK (on_crop_mode_toggled), self);
-  //son of a bitch there is just too many of them, what the fuck 
+  
   g_signal_connect_swapped (self->add_text_button, "clicked", G_CALLBACK (on_add_text_clicked), self);
   g_signal_connect_swapped (self->layer_text_entry, "changed", G_CALLBACK (on_layer_text_changed), self);
   g_signal_connect_swapped (self->layer_font_size, "value-changed", G_CALLBACK (on_layer_text_changed), self);
@@ -856,6 +862,39 @@ on_delete_template_clicked (MyappWindow *self) {
   gtk_alert_dialog_choose (dialog, GTK_WINDOW (self), NULL, on_delete_confirm_response, self);
 }
 
+// NEW: Helper to identify which handle is hovered
+static ResizeHandle
+get_crop_handle_at_position (MyappWindow *self, double x, double y) {
+    double handle_radius = 0.05; // 5% tolerance area
+    
+    // Check corners first (priority)
+    if (fabs(x - self->crop_x) < handle_radius && fabs(y - self->crop_y) < handle_radius)
+        return HANDLE_TOP_LEFT;
+    if (fabs(x - (self->crop_x + self->crop_w)) < handle_radius && fabs(y - self->crop_y) < handle_radius)
+        return HANDLE_TOP_RIGHT;
+    if (fabs(x - self->crop_x) < handle_radius && fabs(y - (self->crop_y + self->crop_h)) < handle_radius)
+        return HANDLE_BOTTOM_LEFT;
+    if (fabs(x - (self->crop_x + self->crop_w)) < handle_radius && fabs(y - (self->crop_y + self->crop_h)) < handle_radius)
+        return HANDLE_BOTTOM_RIGHT;
+
+    // Check edges
+    if (fabs(y - self->crop_y) < handle_radius && x > self->crop_x && x < self->crop_x + self->crop_w)
+        return HANDLE_TOP;
+    if (fabs(y - (self->crop_y + self->crop_h)) < handle_radius && x > self->crop_x && x < self->crop_x + self->crop_w)
+        return HANDLE_BOTTOM;
+    if (fabs(x - self->crop_x) < handle_radius && y > self->crop_y && y < self->crop_y + self->crop_h)
+        return HANDLE_LEFT;
+    if (fabs(x - (self->crop_x + self->crop_w)) < handle_radius && y > self->crop_y && y < self->crop_y + self->crop_h)
+        return HANDLE_RIGHT;
+
+    // Check inside
+    if (x > self->crop_x && x < self->crop_x + self->crop_w &&
+        y > self->crop_y && y < self->crop_y + self->crop_h)
+        return HANDLE_CENTER;
+
+    return HANDLE_NONE;
+}
+
 //follow mouse
 static void
 on_mouse_move (GtkEventControllerMotion *controller, double x, double y, MyappWindow *self) {
@@ -885,6 +924,27 @@ on_mouse_move (GtkEventControllerMotion *controller, double x, double y, MyappWi
   w_ratio = ww / img_w;
   h_ratio = wh / img_h;
   screen_scale = (w_ratio < h_ratio) ? w_ratio : h_ratio;
+
+  // UPDATED: Cursor logic for 8-way cropping
+  if (gtk_toggle_button_get_active(self->crop_mode_button)) {
+    ResizeHandle handle = get_crop_handle_at_position(self, rel_x, rel_y);
+    // const char *cursor_name = NULL;
+
+    switch (handle) {
+        case HANDLE_TOP_LEFT:     cursor_name = "nw-resize"; break;
+        case HANDLE_TOP_RIGHT:    cursor_name = "ne-resize"; break;
+        case HANDLE_BOTTOM_LEFT:  cursor_name = "sw-resize"; break;
+        case HANDLE_BOTTOM_RIGHT: cursor_name = "se-resize"; break;
+        case HANDLE_TOP:          cursor_name = "n-resize"; break;
+        case HANDLE_BOTTOM:       cursor_name = "s-resize"; break;
+        case HANDLE_LEFT:         cursor_name = "w-resize"; break;
+        case HANDLE_RIGHT:        cursor_name = "e-resize"; break;
+        case HANDLE_CENTER:       cursor_name = "move"; break;
+        default:                  cursor_name = NULL; break;
+    }
+    gtk_widget_set_cursor_from_name(GTK_WIDGET(self->meme_preview), cursor_name);
+    return; // Don't check layers if cropping
+  }
 
   for (l = g_list_last(self->layers); l != NULL; l = l->prev) {
     layer = (ImageLayer *)l->data;
@@ -951,26 +1011,26 @@ on_drag_begin (GtkGestureDrag *gesture, double x, double y, MyappWindow *self) {
   h_ratio = wh / img_h;
   screen_scale = (w_ratio < h_ratio) ? w_ratio : h_ratio;
 
-  // CROP DRAG LOGIC
+  // UPDATED: CROP DRAG LOGIC
   if (gtk_toggle_button_get_active(self->crop_mode_button) && self->template_image) {
-      double handle_size = 0.05; 
-      
-      // Bottom-right resize
-      if (fabs(rel_x - (self->crop_x + self->crop_w)) < handle_size &&
-          fabs(rel_y - (self->crop_y + self->crop_h)) < handle_size) {
-          self->drag_type = DRAG_TYPE_CROP_RESIZE;
-      } else if (rel_x > self->crop_x && rel_x < self->crop_x + self->crop_w &&
-                 rel_y > self->crop_y && rel_y < self->crop_y + self->crop_h) {
+      self->active_crop_handle = get_crop_handle_at_position(self, rel_x, rel_y);
+
+      if (self->active_crop_handle == HANDLE_CENTER) {
           self->drag_type = DRAG_TYPE_CROP_MOVE;
+      } else if (self->active_crop_handle != HANDLE_NONE) {
+          self->drag_type = DRAG_TYPE_CROP_RESIZE;
+      } else {
+          self->drag_type = DRAG_TYPE_NONE;
+          return;
       }
-      
+
       self->drag_start_x = rel_x;
       self->drag_start_y = rel_y;
       self->drag_obj_start_x = self->crop_x;
       self->drag_obj_start_y = self->crop_y;
-      self->drag_obj_start_scale = self->crop_w; 
-      self->drag_obj_start_h = self->crop_h; // <--- SAVE HEIGHT HERE
-      return; 
+      self->drag_obj_start_scale = self->crop_w;
+      self->drag_obj_start_h = self->crop_h;
+      return;
   }
 
   // LAYER DRAG LOGIC
@@ -1056,15 +1116,50 @@ on_drag_update (GtkGestureDrag *gesture, double offset_x, double offset_y, Myapp
       self->crop_y = CLAMP(self->drag_obj_start_y + delta_y, 0.0, 1.0 - self->crop_h);
       render_meme(self);
       return;
-  } 
+  }
+  // UPDATED: 8-WAY RESIZE MATH
   else if (self->drag_type == DRAG_TYPE_CROP_RESIZE) {
-      double new_w = self->drag_obj_start_scale + delta_x;
-      // Assume aspect change allowed, height delta uses standard coords but needs logic if keeping aspect
-      // Simple freeform resize for now:
-      double new_h = self->drag_obj_start_h + delta_y;
-      
-      self->crop_w = CLAMP(new_w, 0.1, 1.0 - self->crop_x);
-      self->crop_h = CLAMP(new_h, 0.1, 1.0 - self->crop_y);
+      double new_x = self->drag_obj_start_x;
+      double new_y = self->drag_obj_start_y;
+      double new_w = self->drag_obj_start_scale;
+      double new_h = self->drag_obj_start_h;
+
+      // Horizontal
+      if (self->active_crop_handle == HANDLE_LEFT || 
+          self->active_crop_handle == HANDLE_TOP_LEFT || 
+          self->active_crop_handle == HANDLE_BOTTOM_LEFT) {
+          
+          double max_right = self->drag_obj_start_x + self->drag_obj_start_scale;
+          new_x = CLAMP(self->drag_obj_start_x + delta_x, 0.0, max_right - 0.05);
+          new_w = max_right - new_x;
+      } 
+      else if (self->active_crop_handle == HANDLE_RIGHT || 
+               self->active_crop_handle == HANDLE_TOP_RIGHT || 
+               self->active_crop_handle == HANDLE_BOTTOM_RIGHT) {
+               
+          new_w = CLAMP(self->drag_obj_start_scale + delta_x, 0.05, 1.0 - new_x);
+      }
+
+      // Vertical
+      if (self->active_crop_handle == HANDLE_TOP || 
+          self->active_crop_handle == HANDLE_TOP_LEFT || 
+          self->active_crop_handle == HANDLE_TOP_RIGHT) {
+          
+          double max_bottom = self->drag_obj_start_y + self->drag_obj_start_h;
+          new_y = CLAMP(self->drag_obj_start_y + delta_y, 0.0, max_bottom - 0.05);
+          new_h = max_bottom - new_y;
+      } 
+      else if (self->active_crop_handle == HANDLE_BOTTOM || 
+               self->active_crop_handle == HANDLE_BOTTOM_LEFT || 
+               self->active_crop_handle == HANDLE_BOTTOM_RIGHT) {
+               
+          new_h = CLAMP(self->drag_obj_start_h + delta_y, 0.05, 1.0 - new_y);
+      }
+
+      self->crop_x = new_x;
+      self->crop_y = new_y;
+      self->crop_w = new_w;
+      self->crop_h = new_h;
       render_meme(self);
       return;
   }
@@ -1276,16 +1371,6 @@ apply_deep_fry (GdkPixbuf *src) {
   return final;
 }
 
-// Stop and think, You are about to enter a place called the void.
-// The rendering logic is so fragile, any code change here can destroy a whole function
-// Do not edit carelessly, consider what you're about to do Tarnished.
-
-
-
-
-
-// uhhhh, rewrote almost the goddamn render function just for a
-// crop function
 static void render_meme (MyappWindow *self) {
   int width, height;
   cairo_surface_t *surface;
@@ -1303,7 +1388,7 @@ static void render_meme (MyappWindow *self) {
   width = gdk_pixbuf_get_width (self->template_image);
   height = gdk_pixbuf_get_height (self->template_image);
 
-  
+
   surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, width, height);
   cr = cairo_create (surface);
 
@@ -1335,17 +1420,17 @@ static void render_meme (MyappWindow *self) {
        cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
        cairo_set_font_size (cr, layer->font_size);
        cairo_text_extents (cr, layer->text, &extents);
-       
+
        layer->width = extents.width + 10;
        layer->height = extents.height + 10;
 
        cairo_move_to (cr, -(extents.width/2.0 + extents.x_bearing), -(extents.height/2.0 + extents.y_bearing));
        cairo_text_path (cr, layer->text);
-       
+
        cairo_set_source_rgba (cr, 0, 0, 0, layer->opacity);
        cairo_set_line_width (cr, layer->font_size * 0.08);
        cairo_stroke_preserve (cr);
-       
+
        cairo_set_source_rgba (cr, 1, 1, 1, layer->opacity);
        cairo_fill (cr);
     }
@@ -1354,7 +1439,7 @@ static void render_meme (MyappWindow *self) {
 
   cairo_surface_flush (surface);
   cairo_destroy (cr);
-  
+
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   composite_pixbuf = gdk_pixbuf_get_from_surface (surface, 0, 0, width, height);
   G_GNUC_END_IGNORE_DEPRECATIONS
@@ -1362,8 +1447,8 @@ static void render_meme (MyappWindow *self) {
 
   if (composite_pixbuf == NULL) return;
 
-  
-  if (self->drag_type == DRAG_TYPE_NONE) { 
+
+  if (self->drag_type == DRAG_TYPE_NONE) {
     if (gtk_toggle_button_get_active(self->cinematic_button)) {
         cinematic = apply_saturation_contrast(composite_pixbuf, 1.15, 1.05);
         if (cinematic) { g_object_unref(composite_pixbuf); composite_pixbuf = cinematic; }
@@ -1374,38 +1459,38 @@ static void render_meme (MyappWindow *self) {
     }
   }
 
-  
+
   g_clear_object (&self->final_meme);
   self->final_meme = g_object_ref(composite_pixbuf);
 
   cairo_surface_t *overlay_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
   cairo_t *cr_ov = cairo_create(overlay_surf);
-  
-  
+
+
   gdk_cairo_set_source_pixbuf(cr_ov, composite_pixbuf, 0, 0);
   cairo_paint(cr_ov);
 
-  
+
   if (gtk_toggle_button_get_active(self->crop_mode_button)) {
       double cx = self->crop_x * width;
       double cy = self->crop_y * height;
       double cw = self->crop_w * width;
       double ch = self->crop_h * height;
 
-      
+      // Darken outside
       cairo_set_source_rgba(cr_ov, 0, 0, 0, 0.6);
       if (cy > 0) { cairo_rectangle(cr_ov, 0, 0, width, cy); cairo_fill(cr_ov); }
       if (cy + ch < height) { cairo_rectangle(cr_ov, 0, cy + ch, width, height - (cy + ch)); cairo_fill(cr_ov); }
       if (cx > 0) { cairo_rectangle(cr_ov, 0, cy, cx, ch); cairo_fill(cr_ov); }
       if (cx + cw < width) { cairo_rectangle(cr_ov, cx + cw, cy, width - (cx + cw), ch); cairo_fill(cr_ov); }
 
-      
+      // Selection box
       cairo_set_source_rgba(cr_ov, 1, 1, 1, 0.9);
       cairo_set_line_width(cr_ov, 2.0);
       cairo_rectangle(cr_ov, cx, cy, cw, ch);
       cairo_stroke(cr_ov);
 
-      
+      // Rule of thirds lines
       cairo_set_source_rgba(cr_ov, 1, 1, 1, 0.3);
       cairo_set_line_width(cr_ov, 1.0);
       cairo_move_to(cr_ov, cx + cw/3.0, cy); cairo_line_to(cr_ov, cx + cw/3.0, cy + ch);
@@ -1413,6 +1498,20 @@ static void render_meme (MyappWindow *self) {
       cairo_move_to(cr_ov, cx, cy + ch/3.0); cairo_line_to(cr_ov, cx + cw, cy + ch/3.0);
       cairo_move_to(cr_ov, cx, cy + 2*ch/3.0); cairo_line_to(cr_ov, cx + cw, cy + 2*ch/3.0);
       cairo_stroke(cr_ov);
+
+      // NEW: Draw visual handles (dots)
+      double handle_r = 5.0; // visual size
+      cairo_set_source_rgba(cr_ov, 1, 1, 1, 1); 
+      
+      cairo_arc(cr_ov, cx, cy, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // TL
+      cairo_arc(cr_ov, cx + cw, cy, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // TR
+      cairo_arc(cr_ov, cx, cy + ch, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // BL
+      cairo_arc(cr_ov, cx + cw, cy + ch, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // BR
+      
+      cairo_arc(cr_ov, cx + cw/2.0, cy, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // T
+      cairo_arc(cr_ov, cx + cw/2.0, cy + ch, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // B
+      cairo_arc(cr_ov, cx, cy + ch/2.0, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // L
+      cairo_arc(cr_ov, cx + cw, cy + ch/2.0, handle_r, 0, 2*M_PI); cairo_fill(cr_ov); // R
   }
   else if (self->selected_layer) {
       ImageLayer *sl = self->selected_layer;
@@ -1420,7 +1519,7 @@ static void render_meme (MyappWindow *self) {
       double sy = sl->y * height;
       double box_w = sl->width * sl->scale;
       double box_h = sl->height * sl->scale;
-      
+
       cairo_save(cr_ov);
       cairo_translate(cr_ov, sx, sy);
       cairo_rotate(cr_ov, sl->rotation);
@@ -1448,9 +1547,6 @@ static void render_meme (MyappWindow *self) {
     g_object_unref (composite_pixbuf);
   }
 }
-
-//ngl this is so ass, I think im gonna move other functions to a different file
-// like editing.c and import its header files or something
 
 //button for deep fry
 static void on_deep_fry_toggled (GtkToggleButton *btn, MyappWindow *self) {
@@ -1505,7 +1601,7 @@ static void on_export_response (GObject *s, GAsyncResult *r, gpointer d) {
   GtkFileDialog *dialog = GTK_FILE_DIALOG (s);
   MyappWindow *self = MYAPP_WINDOW (d);
   GFile *file = gtk_file_dialog_save_finish (dialog, r, NULL);
-  
+
   if (file && self->final_meme) {
     GdkPixbuf *to_save = NULL;
     if (gtk_toggle_button_get_active(self->crop_mode_button)) {
@@ -1517,11 +1613,11 @@ static void on_export_response (GObject *s, GAsyncResult *r, gpointer d) {
         int h = (int)(self->crop_h * ih);
 
         //sanity check???
-        // damn 
+        // damn
         if (w > 0 && h > 0 && x >= 0 && y >= 0 && (x + w) <= iw && (y + h) <= ih) {
             to_save = gdk_pixbuf_new_subpixbuf(self->final_meme, x, y, w, h);
         } else {
-            
+
             to_save = g_object_ref(self->final_meme);
         }
     } else {
@@ -1529,12 +1625,14 @@ static void on_export_response (GObject *s, GAsyncResult *r, gpointer d) {
     }
 
     gdk_pixbuf_save (to_save, g_file_get_path (file), "png", NULL, NULL);
-    
+
     if (to_save) g_object_unref (to_save);
     g_object_unref (file);
   }
 }
-
+//why is the gtk and libadwaita function are so long
+// why cant they just be like .title("title") like
+// rust does it, ts id so ass
 
 static void on_export_clicked (MyappWindow *self) {
   GtkFileDialog *dialog;
