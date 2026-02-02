@@ -2,3 +2,4 @@ _build
 .flatpak-builder
 PKGBUILD
 .cache/*
+.vscode
